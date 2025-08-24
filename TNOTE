@@ -167,6 +167,7 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="logo"></div>
+/* Emirhan's Notes can be replaceable */
         <div><b>Emirhan's Notes</b></div>
       </div>
       <div class="row" style="margin-top:10px">
