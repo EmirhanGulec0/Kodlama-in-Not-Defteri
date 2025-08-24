@@ -1,0 +1,751 @@
+/* 
+     @author Emirhan Güleç 
+*/
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TNotes – Dosya & Notlar + Takvim</title>
+
+  <!-- highlight.js (VS Code benzeri: vs2015 teması) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- Ortak diller -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: #121936;
+      --muted: #8ea0c2;
+      --text: #e7ecf8;
+      --accent: #7c9cff;
+      --accent-2: #28d7a0;
+      --danger: #ff6b6b;
+      --shadow: 0 10px 30px rgba(0,0,0,.3);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui;
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(124,156,255,.18), transparent), var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+    .app{display:grid; grid-template-columns: 320px 1fr; gap:18px; height:100vh; padding:18px}
+    .sidebar{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      display:flex; flex-direction:column; min-width:280px; overflow:auto;
+    }
+    .brand{display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:14px}
+    .logo{width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg, var(--accent), #b78cff);}
+    .brand b{letter-spacing:.5px}
+
+    .row{display:flex; gap:8px; flex-wrap:wrap}
+    .btn{
+      border:1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04);
+      color: var(--text); padding:10px 12px; border-radius:12px; cursor:pointer;
+      font-weight:600; transition:.18s;
+    }
+    .btn:hover{background: rgba(255,255,255,.08)}
+    .btn.primary{background: linear-gradient(135deg, var(--accent), #9db6ff); color:#0b1020; border:none}
+    .btn.primary:hover{filter: brightness(1.05)}
+    .btn.sm{padding:6px 10px; font-weight:600; border-radius:10px}
+
+    .search{margin:12px 0; position:relative}
+    .search input{
+      width:100%; padding:12px 14px 12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04); color: var(--text);
+    }
+
+    .files{overflow:auto; padding-right:6px; display:flex; flex-direction:column; gap:6px}
+    .file-item{
+      padding:10px; border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,.06);
+      background: rgba(255,255,255,.03);
+    }
+    .file-item.active{background: rgba(124,156,255,.15); border-color: rgba(124,156,255,.4)}
+    .file-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .file-title{font-weight:800}
+    .notes{display:flex; flex-direction:column; gap:4px; margin-top:8px}
+    .note-item{padding:8px 10px; border-radius:10px; cursor:pointer; border:1px solid transparent}
+    .note-item.active{background: rgba(124,156,255,.15); border-color: rgba(124,156,255,.4)}
+
+    .main{display:flex; flex-direction:column; gap:12px;}
+    .toolbar{
+      background:rgba(255,255,255,.05); border-radius:var(--radius); padding:10px;
+      display:flex; align-items:center; gap:8px; position:sticky; top:18px; justify-content:space-between;
+    }
+    .left-tools{display:flex; gap:8px; flex-wrap:wrap}
+    .tabs{display:flex; gap:6px}
+    .tab{border:1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); padding:8px 12px; border-radius:999px; cursor:pointer}
+    .tab.active{background: linear-gradient(135deg, var(--accent), #9db6ff); color:#0b1020; border:none}
+
+    .editor,.calendar{
+      flex:1; overflow:auto; padding:14px; background: rgba(255,255,255,.04);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .calendar{display:none}
+
+    .title{width: 100%; font-size: 28px; font-weight: 800; border:none; background:transparent; color: var(--text); margin: 8px 0 18px 0;}
+
+    .block{position:relative; padding:4px 10px; border-radius:10px}
+    .block[contenteditable="true"]:empty:before{content: attr(data-placeholder); color: var(--muted)}
+    .block.h1{font-size: 28px; font-weight: 800}
+    .block.h2{font-size: 22px; font-weight: 700}
+    .block.p{font-size: 16px; line-height:1.6}
+    .block.todo{display:flex; gap:10px; align-items:flex-start}
+    .block.todo input{margin-top:6px}
+    .divider{height:1px; background: rgba(255,255,255,.12); margin:10px 0}
+
+    /* Kod blokları */
+    .code-wrap{margin:12px 0; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.08); background:#0b0f1d}
+    .code-toolbar{display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 10px; background:#0f1326; border-bottom:1px solid rgba(255,255,255,.08)}
+    .code-toolbar .left{display:flex; gap:8px; align-items:center}
+    .code-toolbar select{background:#162044; color:#cfe3ff; border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:6px 10px}
+    .code-area{display:none; width:100%; min-height:140px; resize:vertical; border:none; outline:none; background:#0b0f1d; color:#d6deff; padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:14px; line-height:1.6}
+    pre.code-preview{margin:0; padding:12px; overflow:auto; white-space:pre; font-size:14px; line-height:1.6}
+    .code-wrap.editing .code-area{display:block}
+    .code-wrap.editing .code-preview{display:none}
+
+    /* Takvim */
+    .calendar-inner{display:flex; flex-direction:column; gap:10px}
+    .calendar-header{display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background: rgba(255,255,255,.04); border-radius:12px}
+    .calendar-header .title{margin:0; font-size:20px}
+    .cal-nav{display:flex; gap:8px}
+    .calendar-grid{display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; padding:6px}
+    .day-head,.day-cell{padding:10px; text-align:center; border-radius:10px}
+    .day-head{background: rgba(255,255,255,.06); font-weight:700; color:#cfe3ff}
+    .day-cell{background: rgba(255,255,255,.03); cursor:pointer; min-height:64px}
+    .day-cell:hover{background: rgba(255,255,255,.06)}
+    .day-cell.marked{background: var(--accent-2); color:#0b1020; font-weight:800}
+
+    /* Context menu */
+    .context-menu{position:absolute; background:#1c1f33; border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:6px; display:none; flex-direction:column; min-width:200px; z-index:9999}
+    .context-menu .grp{padding:4px 0; border-top:1px solid rgba(255,255,255,.08); margin-top:4px}
+    .context-menu button{width:100%; background:none; border:none; text-align:left; padding:8px 10px; color:var(--text); cursor:pointer}
+    .context-menu button:hover{background:rgba(255,255,255,.08)}
+  
+    /* Not kısmı için dikey scroll */
+    .editor{
+      overflow-y: auto !important;
+      max-height: calc(100vh - 100px);
+    }
+
+    /* Kod blokları için hem yatay hem dikey scroll */
+    pre.code-preview{
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+      max-height: 400px;
+    }
+
+    .code-area{
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+      max-height: 400px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div><b>Emirhan's Notes</b></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="newFileBtn">+ Yeni Dosya</button>
+        <button class="btn" id="newNoteBtn">+ Yeni Not</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="exportBtn">Dışa aktar</button>
+        <label class="btn" for="importFile">İçe aktar</label>
+        <input id="importFile" type="file" accept="application/json" style="display:none"/>
+      </div>
+      <div class="search">
+        <input id="searchInput" placeholder="Notlarda ara"/>
+      </div>
+      <div class="files" id="filesList"></div>
+    </aside>
+
+    <main class="main">
+      <div class="toolbar">
+        <div class="left-tools">
+          <button class="btn" data-add="p">Paragraf</button>
+          <button class="btn" data-add="h1">Başlık 1</button>
+          <button class="btn" data-add="h2">Başlık 2</button>
+          <button class="btn" data-add="todo">Görev</button>
+          <button class="btn" data-add="code">Kod Bloğu</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" id="tab-notes">Notlar</div>
+          <div class="tab" id="tab-calendar">Takvim</div>
+        </div>
+      </div>
+
+      <section class="editor" id="editorSection">
+        <input class="title" id="titleInput" placeholder="Başlık…"/>
+        <div id="blocks"></div>
+      </section>
+
+      <section class="calendar" id="calendarSection">
+        <div class="calendar-inner">
+          <div class="calendar-header">
+            <div class="cal-nav">
+              <button class="btn sm" id="prevMonthBtn">←</button>
+              <button class="btn sm" id="nextMonthBtn">→</button>
+            </div>
+            <div class="title" id="calTitle"></div>
+            <div style="width:64px"></div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Sağ tık menüsü -->
+  <div class="context-menu" id="contextMenu">
+    <div><b style="padding:8px 10px; display:block; color:#cfe3ff">İşlemler</b></div>
+    <button data-action="color-red">Yazıyı Kırmızı Yap</button>
+    <button data-action="color-green">Yazıyı Yeşil Yap</button>
+    <button data-action="color-blue">Yazıyı Mavi Yap</button>
+    <button data-action="color-yellow">Yazıyı Sarı Yap</button>
+    <div class="grp"></div>
+    <button data-action="bigger">Yazıyı Büyüt</button>
+    <button data-action="smaller">Yazıyı Küçült</button>
+    <div class="grp"></div>
+    <button data-action="add-note-under-file" style="display:none">Bu Dosyanın Altına Yeni Not</button>
+    <button data-action="rename-file" style="display:none">Dosyayı Yeniden Adlandır</button>
+    <button data-action="delete-file" style="display:none">Dosyayı Sil</button>
+    <button data-action="rename-note" style="display:none">Notu Yeniden Adlandır</button>
+    <button data-action="delete-note" style="display:none">Notu Sil</button>
+    <button data-action="delete-code" style="display:none">Kod Bloğunu Sil</button>
+    <button data-action="delete-block" style="display:none">Bloğu (Paragrafı) Sil</button>
+  </div>
+
+  <script>
+    const storeKey = 'mini-notion-v4';
+    const calStoreKey = 'mini-notion-calendar';
+    let data = JSON.parse(localStorage.getItem(storeKey) || 'null');
+    let calendarMarks = JSON.parse(localStorage.getItem(calStoreKey) || '{}');
+
+    // Seçimler
+    let currentFileId = null;
+    let currentNoteId = null;
+
+    // İlk kurulum veya v3'ten göç
+    function uid(){ return Math.random().toString(36).slice(2,10); }
+    function init(){
+      if(!data){
+        // v3'ten otomatik göç: eski notes varsa içeri aktar
+        const old = JSON.parse(localStorage.getItem('mini-notion-v3') || '[]');
+        if(Array.isArray(old) && old.length){
+          data = { files: [ { id: uid(), title:'Genel', notes: old } ] };
+          currentFileId = data.files[0].id;
+          currentNoteId = data.files[0].notes[0]?.id || null;
+        }else{
+          data = { files: [] };
+        }
+      }
+      save();
+      renderFilesList();
+      // bir şey seç
+      if(!currentFileId && data.files[0]) currentFileId = data.files[0].id;
+      if(currentFileId && !currentNoteId){
+        const f = data.files.find(f=>f.id===currentFileId);
+        if(f && f.notes[0]) currentNoteId = f.notes[0].id;
+      }
+      if(currentNoteId) loadNote(currentNoteId);
+    }
+
+    function save(){
+      localStorage.setItem(storeKey, JSON.stringify(data));
+    }
+
+    // UI elemanları
+    const filesList = document.getElementById('filesList');
+    const blocksEl = document.getElementById('blocks');
+    const titleEl = document.getElementById('titleInput');
+
+    // Dosya & Not oluşturma
+    function createFile(){
+      const f = { id: uid(), title: 'Yeni Dosya', notes: [] };
+      data.files.unshift(f);
+      currentFileId = f.id; currentNoteId = null;
+      save(); renderFilesList();
+    }
+
+    function createNote(fileId){
+      if(!fileId){
+        if(!currentFileId){ createFile(); }
+        fileId = currentFileId;
+      }
+      const n = { id: uid(), title: 'Yeni Not', updatedAt: Date.now(), blocks: [{type:'p', text:''}] };
+      const f = data.files.find(x=>x.id===fileId);
+      if(!f) return;
+      f.notes.unshift(n);
+      currentFileId = fileId;
+      currentNoteId = n.id;
+      save(); renderFilesList(); loadNote(n.id);
+    }
+
+    // Listeleme
+    function renderFilesList(filter=''){
+      filesList.innerHTML = '';
+      for(const f of data.files){
+        // Dosya kutusu
+        const fileWrap = document.createElement('div');
+        fileWrap.className = 'file-item' + (f.id===currentFileId?' active':'');
+        fileWrap.dataset.id = f.id;
+        fileWrap.dataset.type = 'file-item';
+
+        const head = document.createElement('div');
+        head.className = 'file-head';
+
+        const title = document.createElement('div');
+        title.className = 'file-title';
+        title.textContent = f.title;
+        head.appendChild(title);
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn sm';
+        addBtn.textContent = '+ Not';
+        addBtn.onclick = (ev)=>{ ev.stopPropagation(); createNote(f.id); };
+        head.appendChild(addBtn);
+
+        fileWrap.appendChild(head);
+
+        // Notlar
+        const notesWrap = document.createElement('div');
+        notesWrap.className = 'notes';
+        for(const n of f.notes.filter(x=>x.title.toLowerCase().includes(filter.toLowerCase()))){
+          const el = document.createElement('div');
+          el.className = 'note-item' + (n.id===currentNoteId?' active':'');
+          el.textContent = n.title;
+          el.dataset.id = n.id;
+          el.dataset.type = 'note-item';
+          el.onclick = ()=>{ loadNote(n.id); };
+          notesWrap.appendChild(el);
+        }
+
+        fileWrap.onclick = ()=>{ currentFileId = f.id; renderFilesList(); };
+        fileWrap.appendChild(notesWrap);
+        filesList.appendChild(fileWrap);
+      }
+    }
+
+    function loadNote(noteId){
+      let found = null, fndFileId = null;
+      for(const f of data.files){
+        const n = f.notes.find(x=>x.id===noteId);
+        if(n){ found = n; fndFileId = f.id; break; }
+      }
+      if(!found) return;
+      currentFileId = fndFileId;
+      currentNoteId = found.id;
+      titleEl.value = found.title;
+      blocksEl.innerHTML='';
+      for(const b of found.blocks){ appendBlock(b); }
+      renderFilesList();
+    }
+
+    // Kod bloğu ve blok render yardımcıları (aynı kaldı)
+    const LANGS = [
+      {v:'javascript', t:'JavaScript'},
+      {v:'typescript', t:'TypeScript'},
+      {v:'python', t:'Python'},
+      {v:'c', t:'C'},
+      {v:'cpp', t:'C++'},
+      {v:'java', t:'Java'},
+      {v:'xml', t:'HTML/XML'},
+      {v:'css', t:'CSS'},
+      {v:'json', t:'JSON'},
+      {v:'bash', t:'Bash'}
+    ];
+
+    function makeCodeBlock(b){
+      const wrap=document.createElement('div'); wrap.className='code-wrap'; wrap.dataset.type='code';
+      wrap.dataset.lang = b.lang || 'javascript';
+
+      const toolbar=document.createElement('div'); toolbar.className='code-toolbar';
+      const left=document.createElement('div'); left.className='left';
+      const sel=document.createElement('select'); sel.className='code-lang';
+      LANGS.forEach(o=>{
+        const opt=document.createElement('option'); opt.value=o.v; opt.textContent=o.t;
+        if(o.v === wrap.dataset.lang) opt.selected=true;
+        sel.appendChild(opt);
+      });
+      left.appendChild(sel);
+
+      const btnToggle=document.createElement('button'); btnToggle.className='btn sm'; btnToggle.textContent='Düzenle/Önizle';
+      const btnCopy=document.createElement('button'); btnCopy.className='btn sm'; btnCopy.textContent='Kopyala';
+
+      toolbar.appendChild(left);
+      toolbar.appendChild(document.createTextNode(''));
+      toolbar.appendChild(btnToggle);
+      toolbar.appendChild(btnCopy);
+
+      const textarea=document.createElement('textarea'); textarea.className='code-area';
+      textarea.value=b.text || '';
+
+      const pre=document.createElement('pre'); pre.className='code-preview';
+      const code=document.createElement('code');
+      code.className='language-' + (b.lang || 'javascript');
+      code.textContent = b.text || '';
+      pre.appendChild(code);
+
+      wrap.appendChild(toolbar);
+      wrap.appendChild(textarea);
+      wrap.appendChild(pre);
+
+      wrap.classList.remove('editing');
+      highlightCode(code, wrap.dataset.lang);
+
+      sel.onchange = () => {
+        wrap.dataset.lang = sel.value;
+        code.className = 'language-' + sel.value;
+        highlightCode(code, wrap.dataset.lang);
+        autoSave();
+      };
+
+      btnToggle.onclick = () => {
+        if(wrap.classList.contains('editing')){
+          code.textContent = textarea.value;
+          highlightCode(code, wrap.dataset.lang);
+          wrap.classList.remove('editing');
+          autoSave();
+        }else{
+          textarea.value = code.textContent;
+          wrap.classList.add('editing');
+        }
+      };
+
+      btnCopy.onclick = async () => {
+        const txt = wrap.classList.contains('editing') ? textarea.value : code.textContent;
+        try { await navigator.clipboard.writeText(txt); btnCopy.textContent='Kopyalandı'; setTimeout(()=>btnCopy.textContent='Kopyala',1200); } catch(e){}
+      };
+
+      textarea.addEventListener('input', autoSave);
+      return wrap;
+    }
+
+    function highlightCode(codeEl, lang){
+      try{
+        codeEl.className = 'language-' + lang;
+        hljs.highlightElement(codeEl);
+      }catch(e){}
+    }
+
+    function appendBlock(b){
+      if(b.type==='divider'){
+        const d=document.createElement('div'); d.className='divider'; d.dataset.type='divider';
+        blocksEl.appendChild(d); return;
+      }
+      if(b.type==='code'){
+        const wrap = makeCodeBlock(b);
+        blocksEl.appendChild(wrap);
+        return;
+      }
+      if(b.type==='todo'){
+        const div=document.createElement('div'); div.className='block todo'; div.dataset.type='todo';
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!b.checked;
+        const txt=document.createElement('div'); txt.className='block p'; txt.contentEditable=true; txt.innerHTML=b.text||''; txt.setAttribute('data-placeholder','Görev…');
+        cb.onchange=autoSave; txt.addEventListener('input',autoSave);
+        div.appendChild(cb); div.appendChild(txt); blocksEl.appendChild(div); return;
+      }
+      // p / h1 / h2
+      const div=document.createElement('div'); div.className='block '+b.type; div.dataset.type=b.type; div.contentEditable=true; div.innerHTML=b.text||'';
+      div.setAttribute('data-placeholder','Yaz…'); div.addEventListener('input',autoSave);
+      blocksEl.appendChild(div);
+    }
+
+    // Kaydetme
+    function collect(){
+      const f = data.files.find(x=>x.id===currentFileId); if(!f) return;
+      const n = f.notes.find(x=>x.id===currentNoteId); if(!n) return;
+      const blocks=[];
+      for(const child of blocksEl.children){
+        const t = child.dataset.type;
+        if(t==='divider'){ blocks.push({type:'divider'}); continue; }
+        if(t==='code'){
+          const lang = child.dataset.lang || 'javascript';
+          const codeEl = child.querySelector('pre code');
+          const area = child.querySelector('textarea');
+          const isEditing = child.classList.contains('editing');
+          const text = isEditing ? area.value : (codeEl ? codeEl.textContent : '');
+          blocks.push({type:'code', text, lang}); continue;
+        }
+        if(t==='todo'){
+          const cb = child.querySelector('input[type="checkbox"]');
+          const txt = child.querySelector('.block.p');
+          blocks.push({type:'todo', text: txt.innerText, checked: cb.checked}); continue;
+        }
+        // p/h1/h2
+        blocks.push({type:t, text: child.innerText});
+      }
+      n.title = titleEl.value || 'Başlıksız';
+      n.blocks = blocks;
+      n.updatedAt = Date.now();
+      save();
+      renderFilesList();
+    }
+
+    const autoSave = () => { clearTimeout(window._t); window._t = setTimeout(collect, 500); };
+    titleEl.addEventListener('input', autoSave);
+
+    // Araçlar
+    document.getElementById('newFileBtn').onclick=createFile;
+    document.getElementById('newNoteBtn').onclick=()=>createNote();
+    document.getElementById('searchInput').oninput=e=>renderFilesList(e.target.value);
+    document.querySelectorAll('.toolbar [data-add]').forEach(b=>b.onclick=()=>{
+      if(!currentNoteId){ if(!currentFileId) createFile(); createNote(); }
+      const type=b.dataset.add;
+      if(type==='code'){ appendBlock({type:'code', text:'', lang:'javascript'}); }
+      else if(type==='todo'){ appendBlock({type:'todo', text:'', checked:false}); }
+      else { appendBlock({type, text:''}); }
+      autoSave();
+    });
+
+    // Dışa/içe aktar
+    document.getElementById('exportBtn').onclick=()=>{
+      const out = JSON.stringify({data, calendarMarks}, null, 2);
+      const blob = new Blob([out], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='mini-notion-backup.json'; a.click();
+      URL.revokeObjectURL(url);
+    };
+    document.getElementById('importFile').onchange=(e)=>{
+      const file=e.target.files[0]; if(!file) return;
+      const r=new FileReader();
+      r.onload=()=>{
+        try{
+          const obj=JSON.parse(r.result);
+          if(obj.data) data=obj.data;
+          if(obj.calendarMarks) { calendarMarks=obj.calendarMarks; localStorage.setItem(calStoreKey, JSON.stringify(calendarMarks)); }
+          localStorage.setItem(storeKey, JSON.stringify(data));
+          renderFilesList();
+          // bir seçim yap
+          currentFileId = data.files[0]?.id || null;
+          currentNoteId = data.files[0]?.notes[0]?.id || null;
+          if(currentNoteId) loadNote(currentNoteId);
+          renderCalendar();
+        }catch(err){ alert('Geçersiz dosya'); }
+      };
+      r.readAsText(file);
+    };
+
+    // Sekmeler
+    const tabNotes = document.getElementById('tab-notes');
+    const tabCalendar = document.getElementById('tab-calendar');
+    const editorSection = document.getElementById('editorSection');
+    const calendarSection = document.getElementById('calendarSection');
+
+    tabNotes.onclick=()=>{
+      tabNotes.classList.add('active'); tabCalendar.classList.remove('active');
+      editorSection.style.display='block'; calendarSection.style.display='none';
+    };
+    tabCalendar.onclick=()=>{
+      tabCalendar.classList.add('active'); tabNotes.classList.remove('active');
+      editorSection.style.display='none'; calendarSection.style.display='block';
+      renderCalendar();
+    };
+
+    // Takvim
+    const calTitle = document.getElementById('calTitle');
+    const calGrid = document.getElementById('calendarGrid');
+    const monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    document.getElementById('prevMonthBtn').onclick=()=>{ calDate.setMonth(calDate.getMonth()-1); renderCalendar(); };
+    document.getElementById('nextMonthBtn').onclick=()=>{ calDate.setMonth(calDate.getMonth()+1); renderCalendar(); };
+    let calDate = new Date();
+
+    function renderCalendar(){
+      const year = calDate.getFullYear();
+      const month = calDate.getMonth();
+      calTitle.textContent = `${monthNames[month]} ${year}`;
+      calGrid.innerHTML='';
+
+      const heads = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+      heads.forEach(h=>{ const hd=document.createElement('div'); hd.className='day-head'; hd.textContent=h; calGrid.appendChild(hd); });
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const startIndex = (firstDay===0?6:firstDay-1);
+      for(let i=0;i<startIndex;i++){ const empty=document.createElement('div'); empty.className='day-cell'; empty.style.visibility='hidden'; calGrid.appendChild(empty); }
+
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+      for(let d=1; d<=daysInMonth; d++){
+        const cell=document.createElement('div'); cell.className='day-cell';
+        cell.textContent=d;
+        const key=`${year}-${month+1}-${d}`;
+        if(calendarMarks[key]) cell.classList.add('marked');
+        cell.onclick=()=>{
+          if(calendarMarks[key]) delete calendarMarks[key]; else calendarMarks[key]=true;
+          localStorage.setItem(calStoreKey, JSON.stringify(calendarMarks));
+          renderCalendar();
+        };
+        calGrid.appendChild(cell);
+      }
+    }
+
+    // Sağ tık menüsü
+    const menu = document.getElementById('contextMenu');
+    document.addEventListener('contextmenu', e => {
+  const blk = e.target.closest('.block, .note-item, .file-item, .code-wrap');
+      if (blk) {
+        e.preventDefault();
+        menu.style.display = 'flex';
+        menu.style.left = e.pageX + 'px';
+        menu.style.top = e.pageY + 'px';
+        window._ctxTarget = blk;
+
+        // Türüne göre seçenekleri göster/gizle
+        const isBlock = blk.classList.contains('block') || blk.classList.contains('divider') || blk.classList.contains('todo');
+        const isCode = blk.classList.contains('code-wrap');
+        const isNote = blk.classList.contains('note-item');
+        const isFile = blk.classList.contains('file-item');
+
+        menu.querySelector('[data-action="delete-block"]').style.display = isBlock ? 'block' : 'none';
+        menu.querySelector('[data-action="delete-code"]').style.display = isCode ? 'block' : 'none';
+        menu.querySelector('[data-action="delete-note"]').style.display = isNote ? 'block' : 'none';
+        menu.querySelector('[data-action="rename-note"]').style.display = isNote ? 'block' : 'none';
+        menu.querySelector('[data-action="delete-file"]').style.display = isFile ? 'block' : 'none';
+        menu.querySelector('[data-action="rename-file"]').style.display = isFile ? 'block' : 'none';
+        menu.querySelector('[data-action="add-note-under-file"]').style.display = isFile ? 'block' : 'none';
+      }
+    });
+    document.addEventListener('click',()=>menu.style.display='none');
+
+    menu.addEventListener('click', e => {
+      const act = e.target.dataset.action;
+      const t = window._ctxTarget;
+      if (!t || !act) return;
+
+      if (act.startsWith('color-')) {
+        t.style.color = act.split('-')[1];
+      }
+      if (act === 'bigger') {
+        t.style.fontSize = (parseInt(getComputedStyle(t).fontSize) + 4) + 'px';
+      }
+      if (act === 'smaller') {
+        t.style.fontSize = (parseInt(getComputedStyle(t).fontSize) - 4) + 'px';
+      }
+
+      // Bloğu sil (paragraf/kod/görev vs.)
+      if (act === 'delete-code') {
+        t.remove();
+        autoSave();
+      }
+
+      if (act === 'delete-block') {
+        t.remove();
+        autoSave();
+      }
+
+      // Not işlemleri
+      if (act === 'delete-note') {
+        const noteId = t.dataset.id;
+        let file = data.files.find(f=>f.notes.some(n=>n.id===noteId));
+        if(file){
+          const note = file.notes.find(n=>n.id===noteId);
+          if (note && confirm(`"${note.title}" notunu silmek istiyor musun?`)) {
+            file.notes = file.notes.filter(n=>n.id !== noteId);
+            if(currentNoteId === noteId) currentNoteId = file.notes[0]?.id || null;
+            save(); renderFilesList();
+            if(currentNoteId) loadNote(currentNoteId); else { blocksEl.innerHTML=''; titleEl.value=''; }
+          }
+        }
+      }
+      if (act === 'rename-note') {
+        const noteId = t.dataset.id;
+        let file = data.files.find(f=>f.notes.some(n=>n.id===noteId));
+        if(file){
+          const note = file.notes.find(n=>n.id===noteId);
+          const nv = prompt('Yeni not adı:', note.title);
+          if(nv){
+            note.title = nv;
+            save(); renderFilesList();
+          }
+        }
+      }
+
+      // Dosya işlemleri
+      if (act === 'add-note-under-file') {
+        const fileId = t.dataset.id;
+        createNote(fileId);
+      }
+      if (act === 'rename-file') {
+        const fileId = t.dataset.id;
+        const file = data.files.find(f=>f.id===fileId);
+        if(file){
+          const nv = prompt('Yeni dosya adı:', file.title);
+          if(nv){
+            file.title = nv;
+            save(); renderFilesList();
+          }
+        }
+      }
+      if (act === 'delete-file') {
+        const fileId = t.dataset.id;
+        const file = data.files.find(f=>f.id===fileId);
+        if(file && confirm(`"${file.title}" dosyasını ve içindeki ${file.notes.length} notu silmek istiyor musun?`)){
+          data.files = data.files.filter(f=>f.id!==fileId);
+          if(currentFileId === fileId){
+            currentFileId = data.files[0]?.id || null;
+            currentNoteId = currentFileId ? (data.files[0].notes[0]?.id || null) : null;
+          }
+          save(); renderFilesList();
+          if(currentNoteId) loadNote(currentNoteId); else { blocksEl.innerHTML=''; titleEl.value=''; }
+        }
+      }
+
+      menu.style.display = 'none';
+    });
+
+    // İlk açılış için örnek veri yoksa
+    function ensureSample(){
+      if(data.files.length===0){
+        const f = { id: uid(), title:'Genel', notes: [{
+          id: uid(),
+          title:'Hoş geldin',
+          updatedAt: Date.now(),
+          blocks:[
+            {type:'h1', text:'Merhaba 👋'},
+            {type:'p', text:'Artık solda "Dosya" oluşturabilir, dosyanın altına birden fazla not ekleyebilir ve sağ tıkla dosya/not/paragraph silebilirsin.'},
+            {type:'code', lang:'javascript', text:'function hello(){\n  console.log(\"Merhaba Dünya\");\n}\nhello();'}
+          ]
+        }]};
+        data.files.push(f);
+        currentFileId = f.id;
+        currentNoteId = f.notes[0].id;
+        save();
+      }
+    }
+
+    // Başlat
+    init();
+    ensureSample();
+
+    // Takvimi hazırla
+    function bootCalendarOnce(){
+      // no-op (renderCalendar çağrıları tabda yapılıyor)
+    }
+    bootCalendarOnce();
+  </script>
+</body>
+</html>
